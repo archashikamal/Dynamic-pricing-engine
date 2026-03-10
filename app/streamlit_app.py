@@ -1,16 +1,13 @@
 # ============================
 #  Dynamic Pricing — Streamlit App
 # ============================
-
 import sys
 import os
-
 # Ensure project root is on sys.path so `app.model` resolves correctly
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_APP_DIR)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
-
 import pandas as pd
 import streamlit as st
 from app.model import (
@@ -22,7 +19,6 @@ from app.model import (
     build_feature_row,
     optimize_price,
 )
-
 # ──────────────────────────────────────────────
 # PAGE CONFIG
 # ──────────────────────────────────────────────
@@ -32,7 +28,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
 # ──────────────────────────────────────────────
 # CUSTOM CSS
 # ──────────────────────────────────────────────
@@ -40,17 +35,14 @@ st.markdown("""
 <style>
 /* ── Global ── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
-
 /* ── Background ── */
 .stApp {
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
     min-height: 100vh;
 }
-
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] {
     background: rgba(255,255,255,0.04);
@@ -59,7 +51,6 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] * {
     color: #e2e8f0 !important;
 }
-
 /* ── Metric cards ── */
 div[data-testid="metric-container"] {
     background: rgba(255,255,255,0.06);
@@ -79,12 +70,10 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-size: 2rem !important;
     font-weight: 700 !important;
 }
-
 /* ── Selectbox ── */
 div[data-baseweb="select"] {
     border-radius: 10px !important;
 }
-
 /* ── Button ── */
 .stButton > button {
     width: 100%;
@@ -104,7 +93,6 @@ div[data-baseweb="select"] {
     box-shadow: 0 6px 28px rgba(99,102,241,0.6);
     transform: translateY(-1px);
 }
-
 /* ── Info/Success/Error boxes ── */
 .info-card {
     background: rgba(99,102,241,0.12);
@@ -150,29 +138,22 @@ div[data-baseweb="select"] {
 .stMarkdown p { color: #cbd5e1; }
 </style>
 """, unsafe_allow_html=True)
-
-
 # ──────────────────────────────────────────────
 # LOAD ASSETS (cached)
 # ──────────────────────────────────────────────
 @st.cache_resource(show_spinner="Loading pricing model…")
 def load():
     return load_assets()
-
 model, FEATURES, FESTIVAL_DATES, df = load()
-
-
 # ──────────────────────────────────────────────
 # SIDEBAR — INPUTS
 # ──────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚙️ Configuration")
     st.markdown("---")
-
     products   = get_products(df)
     categories = get_categories(df)
     dates      = get_dates(df)
-
     product_id = st.selectbox("🏷️ Product ID",  products,  index=0)
     category   = st.selectbox("📦 Category",     categories, index=0)
     date_str   = st.selectbox("📅 Date",         dates,      index=0)
@@ -181,24 +162,19 @@ with st.sidebar:
         ["Revenue", "Units", "Profit"],
         help="What metric should the optimizer maximize?",
     )
-
     st.markdown("---")
     run_btn = st.button("💹 Get Optimal Price", use_container_width=True)
-
     st.markdown("---")
     st.markdown(
         "<small style='color:#64748b'>Powered by XGBoost + SciPy<br>Festival-aware pricing engine</small>",
         unsafe_allow_html=True,
     )
-
-
 # ──────────────────────────────────────────────
 # MAIN — HEADER
 # ──────────────────────────────────────────────
 st.markdown('<p class="header-title">💹 Dynamic Pricing Engine</p>', unsafe_allow_html=True)
 st.markdown('<p class="header-sub">Festival-aware price optimization using XGBoost + SciPy</p>', unsafe_allow_html=True)
 st.markdown("")
-
 # ──────────────────────────────────────────────
 # MAIN — RUN OPTIMIZATION
 # ──────────────────────────────────────────────
@@ -211,29 +187,37 @@ if run_btn:
         except ValueError as e:
             st.error(str(e))
             st.stop()
-
-    # ── Key Metrics ──
-    st.markdown('<p class="section-header">📊 Pricing Results</p>', unsafe_allow_html=True)
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric(
-        "Optimal Price",
-        f"₹{result['optimal_price']:.2f}",
-        delta=f"{result['uplift_percentage']:+.2f}% vs base",
-        delta_color="normal",
-    )
-    c2.metric("Base Price",      f"₹{result['base_price']:.2f}")
-    c3.metric("Predicted Demand",f"{result['optimal_demand']:.1f} units")
-    c4.metric("Uplift",          f"{result['uplift_percentage']:.2f}%",
-              delta=f"Goal: {result['goal']}")
-
+    uplift_color = "#4ade80" if result['uplift_percentage'] >= 0 else "#f87171"
+    uplift_sign  = "+" if result['uplift_percentage'] >= 0 else ""
+    st.markdown(f"""
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:8px;">
+        <div class="info-card" style="text-align:center;">
+            <div style="color:#94a3b8;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">OPTIMAL PRICE</div>
+            <div style="color:#f1f5f9;font-size:1.9rem;font-weight:700;">₹{result['optimal_price']:.2f}</div>
+            <div style="color:{uplift_color};font-size:0.82rem;margin-top:4px;">{uplift_sign}{result['uplift_percentage']:.2f}% vs base</div>
+        </div>
+        <div class="info-card" style="text-align:center;">
+            <div style="color:#94a3b8;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">BASE PRICE</div>
+            <div style="color:#f1f5f9;font-size:1.9rem;font-weight:700;">₹{result['base_price']:.2f}</div>
+            <div style="color:#64748b;font-size:0.82rem;margin-top:4px;">current price</div>
+        </div>
+        <div class="info-card" style="text-align:center;">
+            <div style="color:#94a3b8;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">PREDICTED DEMAND</div>
+            <div style="color:#f1f5f9;font-size:1.9rem;font-weight:700;">{result['optimal_demand']:.1f}</div>
+            <div style="color:#64748b;font-size:0.82rem;margin-top:4px;">units</div>
+        </div>
+        <div class="info-card" style="text-align:center;">
+            <div style="color:#94a3b8;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">UPLIFT</div>
+            <div style="color:{uplift_color};font-size:1.9rem;font-weight:700;">{uplift_sign}{result['uplift_percentage']:.2f}%</div>
+            <div style="color:#64748b;font-size:0.82rem;margin-top:4px;">Goal: {result['goal']}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     # ── Festival Insight ──
     st.markdown('<p class="section-header">🎉 Festival Insight</p>', unsafe_allow_html=True)
-
     fest_name = result["nearest_festival"].replace("_", " ").title()
     days      = result["days_to_festival"]
     in_season = result["festival_season"]
-
     badge_html = '<span class="festival-badge">🔥 PEAK SEASON</span>' if in_season else ""
     st.markdown(
         f"""<div class="info-card">
@@ -245,7 +229,6 @@ if run_btn:
         </div>""",
         unsafe_allow_html=True,
     )
-
     # ── All Festival Distances ──
     with st.expander("📆 All Festival Distances"):
         fest_df = (
@@ -257,11 +240,9 @@ if run_btn:
             .reset_index(drop=True)
         )
         st.dataframe(fest_df, use_container_width=True, hide_index=True)
-
     # ── Raw row snapshot ──
     with st.expander("🔍 Raw Product Row (from dataset)"):
         st.dataframe(row.to_frame().T, use_container_width=True)
-
 else:
     # ── Welcome placeholder ──
     st.markdown(
@@ -275,3 +256,4 @@ else:
         </div>""",
         unsafe_allow_html=True,
     )
+
