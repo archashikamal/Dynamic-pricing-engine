@@ -4,4 +4,5 @@ pandas
 joblib
 scipy
 scikit-learn
+uvicorn
 xgboost
