@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Pricing Demo</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            padding: 30px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            width: 450px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #2d89ef;
+            color: white;
+            cursor: pointer;
+        }
+        .result-box {
+            background: #e8f4ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>🛒 Dynamic Pricing Demo</h2>
+
+    <label>Product ID</label>
+    <select id="product_id"></select>
+
+    <label>Category</label>
+    <select id="category"></select>
+
+    <label>Date</label>
+    <select id="date"></select>
+
+    <label>Goal</label>
+    <select id="goal">
+        <option>Revenue</option>
+        <option>Units</option>
+        <option>Profit</option>
+    </select>
+
+    <button onclick="callAPI()">Get Optimal Price</button>
+
+    <div class="result-box" id="output"></div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+document.addEventListener("DOMContentLoaded", () => {
+    load("get_products", "product_id", "products");
+    load("get_categories", "category", "categories");
+    load("get_dates", "date", "dates");
+});
+
+function load(endpoint, domId, responseKey) {
+    fetch(`${API}/${endpoint}`)
+        .then(res => res.json())
+        .then(data => {
+            const list = data[responseKey];
+            const select = document.getElementById(domId);
+
+            select.innerHTML = ""; // clear previous
+
+            list.forEach(item => {
+                let opt = document.createElement("option");
+                opt.value = item;
+                opt.textContent = item;
+                select.appendChild(opt);
+            });
+        })
+        .catch(err => console.error("Dropdown Error:", err));
+}
+
+function callAPI() {
+    const payload = {
+        product_id: document.getElementById("product_id").value,
+        category: document.getElementById("category").value,
+        date: document.getElementById("date").value,
+        goal: document.getElementById("goal").value
+    };
+
+    fetch(`${API}/optimize_price`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+        .then(res => res.json())
+        .then(data => {
+            let fest = data.festival_summary;
+
+            document.getElementById("output").style.display = "block";
+            document.getElementById("output").innerHTML = `
+                <h3>📈 Optimal Price: <b>${data.result.optimal_price.toFixed(2)}</b></h3>
+                <p>Uplift: <b>${data.result.uplift_percentage.toFixed(2)}%</b></p>
+                <p><b>Festival Insight:</b><br>
+                   ${fest.nearest_festival.toUpperCase()} in ${fest.days_to_festival} days
+                </p>
+            `;
+        })
+        .catch(err => alert("API Error: " + err));
+}
+</script>
+
+</body>
+</html>
